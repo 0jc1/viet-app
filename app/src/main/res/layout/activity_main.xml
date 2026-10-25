@@ -18,6 +18,7 @@
         android:visibility="gone" />
 
     <LinearLayout
+        android:id="@+id/sheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
@@ -44,26 +45,22 @@
             android:textIsSelectable="true"
             android:textSize="19sp" />
 
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+        <ImageButton
+            android:id="@+id/shutter"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/shutter"
+            android:contentDescription="Take photo" />
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/quickSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="start|center_vertical"
-                android:text="On-device quick pass"
-                android:textColor="#CCCCCC"
-                android:textSize="12sp" />
-
-            <ImageButton
-                android:id="@+id/shutter"
-                android:layout_width="76dp"
-                android:layout_height="76dp"
-                android:layout_gravity="center"
-                android:background="@drawable/shutter"
-                android:contentDescription="Take photo" />
-        </FrameLayout>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/quickSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="On-device quick pass"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp" />
     </LinearLayout>
 </FrameLayout>
