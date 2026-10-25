@@ -5,6 +5,7 @@ Point at Vietnamese text, tap the shutter, and read the English.
 - **Quick pass (on-device):** ML Kit OCR + offline Vietnamese→English. Rough but fast and works offline.
 - **Refined (image model):** the photo goes to OpenRouter; `gemini-3.1-flash-lite` and `claude-haiku-5.5` race and the first to answer wins (~1.2–1.8s). Streams in and replaces the quick pass.
 - **History:** every shot is saved with its translation in app-private storage. Tap the thumbnail next to the shutter to browse past shots, open one full-size, or delete it.
+- **Words:** each photo's Vietnamese words are added to a vocabulary list with their English meanings (compound words like "hút thuốc" stay together). Tap the book button left of the shutter to see it; long-press a word to remove it.
 - Tap the shutter again to retake. Tap the preview to focus. Turn off "On-device quick pass" if your phone is slow enough that it never beats the cloud.
 
 ## Install on your phone

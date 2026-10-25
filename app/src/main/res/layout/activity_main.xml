@@ -49,6 +49,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
+            <!-- Vocabulary list of every word discovered so far. -->
+            <ImageButton
+                android:id="@+id/words"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/thumb_frame"
+                android:contentDescription="Vocabulary"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_book" />
+
             <ImageButton
                 android:id="@+id/shutter"
                 android:layout_width="76dp"

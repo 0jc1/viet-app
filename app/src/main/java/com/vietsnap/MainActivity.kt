@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private val cloud = OpenRouterClient(BuildConfig.OPENROUTER_API_KEY)
     private val onDevice = OnDeviceTranslator()
     private val history by lazy { HistoryStore(this) }
+    private val vocab by lazy { VocabStore(this) }
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var shotJob: Job? = null
@@ -66,6 +67,7 @@ class MainActivity : AppCompatActivity() {
         }
         b.shutter.setOnClickListener { if (b.frozen.visibility == View.VISIBLE) retake() else snap() }
         b.lastShot.setOnClickListener { startActivity(Intent(this, HistoryActivity::class.java)) }
+        b.words.setOnClickListener { startActivity(Intent(this, VocabActivity::class.java)) }
         setUpTapToFocus()
 
         if (BuildConfig.OPENROUTER_API_KEY.isEmpty()) b.status.text = "No API key: add OPENROUTER_API_KEY to .env and rebuild."
@@ -163,14 +165,16 @@ class MainActivity : AppCompatActivity() {
                         runOnUiThread {
                             refined = true
                             winner = model
-                            b.result.text = text
+                            b.result.text = VocabStore.translationPart(text)
                         }
                     }
                 }.onSuccess { text ->
                     refined = true
-                    b.result.text = text
+                    val english = VocabStore.translationPart(text)
+                    b.result.text = english
                     b.status.text = "Refined by image model in ${ms()} ms"
-                    save(jpeg, text, quick, winner, ms())
+                    save(jpeg, english, quick, winner, ms())
+                    addWords(VocabStore.wordsPart(text))
                 }.onFailure { e ->
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     b.status.text = if (b.result.text.isNotEmpty()) {
@@ -199,6 +203,14 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val entry = withContext(Dispatchers.IO) { history.save(jpeg, english, quick, model, ms) }
             showLastShot(entry)
+        }
+    }
+
+    private fun addWords(words: List<Word>) {
+        if (words.isEmpty()) return
+        lifecycleScope.launch {
+            val added = withContext(Dispatchers.IO) { vocab.add(words) }
+            if (added > 0) b.status.append(" · +$added new words")
         }
     }
 

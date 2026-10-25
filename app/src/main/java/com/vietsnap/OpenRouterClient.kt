@@ -82,7 +82,7 @@ class OpenRouterClient(private val apiKey: String) {
                 .put("model", model)
                 .put("stream", true)
                 .put("temperature", 0)
-                .put("max_tokens", 600)
+                .put("max_tokens", 1200)
                 .put("provider", JSONObject().put("sort", "latency"))
                 .put("reasoning", JSONObject().put("enabled", false))
                 .put("messages", JSONArray()
@@ -130,9 +130,13 @@ class OpenRouterClient(private val apiKey: String) {
         // Fastest image models measured at ~1.4-1.8s per photo; racing both trims tail latency.
         val MODELS = listOf("google/gemini-3.1-flash-lite", "anthropic/claude-haiku-5.5")
 
-        private const val SYSTEM_PROMPT =
-            "You translate Vietnamese text in photos. Read all Vietnamese text in the image and " +
-                "output only its English translation, keeping line breaks. If there is no " +
-                "Vietnamese text, output: (no Vietnamese text found)"
+        // Translation first so it streams to the screen immediately; the word list follows.
+        private val SYSTEM_PROMPT = """
+            You translate Vietnamese text in photos.
+            First, output only the English translation of all Vietnamese text in the image, keeping line breaks.
+            Then output a line containing exactly ${VocabStore.MARKER} followed by one line per distinct Vietnamese word in the text, formatted as: vietnamese = english
+            Keep compound words together (e.g. "hút thuốc", "cửa hàng"); give the English meaning in 1-3 words; lowercase the Vietnamese; skip numbers and proper names.
+            If there is no Vietnamese text, output only: (no Vietnamese text found)
+        """.trimIndent()
     }
 }
