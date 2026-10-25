@@ -2,6 +2,7 @@ package com.vietsnap
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -34,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var b: ActivityMainBinding
     private val cloud = OpenRouterClient(BuildConfig.OPENROUTER_API_KEY)
     private val onDevice = OnDeviceTranslator()
+    private val history by lazy { HistoryStore(this) }
     private var cameraProvider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var shotJob: Job? = null
@@ -63,6 +65,7 @@ class MainActivity : AppCompatActivity() {
             if (on) prepareOnDevice()
         }
         b.shutter.setOnClickListener { if (b.frozen.visibility == View.VISIBLE) retake() else snap() }
+        b.lastShot.setOnClickListener { startActivity(Intent(this, HistoryActivity::class.java)) }
         setUpTapToFocus()
 
         if (BuildConfig.OPENROUTER_API_KEY.isEmpty()) b.status.text = "No API key: add OPENROUTER_API_KEY to .env and rebuild."
@@ -79,6 +82,10 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         cloud.warmUp()
+        // Refresh in case shots were deleted in the history screen.
+        lifecycleScope.launch {
+            showLastShot(withContext(Dispatchers.IO) { history.list().firstOrNull() })
+        }
     }
 
     override fun onDestroy() {
@@ -141,6 +148,8 @@ class MainActivity : AppCompatActivity() {
         val t0 = SystemClock.elapsedRealtime()
         fun ms() = SystemClock.elapsedRealtime() - t0
         var refined = false
+        var quick: String? = null
+        var winner: String? = null
 
         shotJob?.cancel()
         shotJob = lifecycleScope.launch {
@@ -150,9 +159,10 @@ class MainActivity : AppCompatActivity() {
             // Cloud first so the upload starts before the on-device work competes for the CPU.
             val cloudJob = launch {
                 runCatching {
-                    cloud.translateImage(jpeg) { _, text ->
+                    cloud.translateImage(jpeg) { model, text ->
                         runOnUiThread {
                             refined = true
+                            winner = model
                             b.result.text = text
                         }
                     }
@@ -160,6 +170,7 @@ class MainActivity : AppCompatActivity() {
                     refined = true
                     b.result.text = text
                     b.status.text = "Refined by image model in ${ms()} ms"
+                    save(jpeg, text, quick, winner, ms())
                 }.onFailure { e ->
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     b.status.text = if (b.result.text.isNotEmpty()) {
@@ -171,13 +182,35 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (b.quickSwitch.isChecked) {
-                val quick = runCatching { onDevice.translate(scaled) }.getOrNull()
+                quick = runCatching { onDevice.translate(scaled) }.getOrNull()
                 if (!refined && quick != null) {
                     b.result.text = quick
                     b.status.text = "Quick (on-device) in ${ms()} ms · refining…"
                 }
             }
             cloudJob.join()
+            // Cloud failed: keep the on-device translation rather than losing the shot.
+            if (!refined) quick?.let { save(jpeg, it, it, null, ms()) }
+        }
+    }
+
+    /** Saves outside the shot's job so a quick retake can't cancel the write. */
+    private fun save(jpeg: ByteArray, english: String, quick: String?, model: String?, ms: Long) {
+        lifecycleScope.launch {
+            val entry = withContext(Dispatchers.IO) { history.save(jpeg, english, quick, model, ms) }
+            showLastShot(entry)
+        }
+    }
+
+    private fun showLastShot(entry: HistoryEntry?) {
+        if (entry == null) {
+            b.lastShot.visibility = View.GONE
+            return
+        }
+        lifecycleScope.launch {
+            val thumb = withContext(Dispatchers.IO) { HistoryStore.thumbnail(entry.image, 128) }
+            b.lastShot.setImageBitmap(thumb)
+            b.lastShot.visibility = View.VISIBLE
         }
     }
 
